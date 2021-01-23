@@ -16,6 +16,14 @@
  */
 
 
+// This sets up the USBBank Keep Alive Functionality. By default, this is set to 100mA of additional current, for 1S every 10.
+#include <Ticker.h>  //Ticker Library
+Ticker USBBank;
+int USBBankState = 0;
+const int keepAlive = D3;// The Keepalive pin for USB Power Banks is D3.
+const int kaTimeOn = 1; // Time to switch the keep alive circuit on.
+const int kaTimeOff = 9; // Time to switch the keep alive circuit off for.
+
 // #define DEBUG 0 // this is used to switch debug comments on and off. Comment it out with // to optimize the code.
 
  
@@ -30,8 +38,8 @@ int clockPin = D5;
 int dataPin = D6;
 // Set the output enable pin. This can be rapidly PWM'd.
 int OE = D4;
-// The Keepalive pin for USB Power Banks is D3.
-int keepAlive = D3;
+
+
 
 
 int sensorValue = 0;        // value read from the pot
@@ -93,6 +101,26 @@ int numrows = 0;
 
 int numRows = sizeof(ledPattern)/sizeof(ledPattern[0]);
 
+//=======================================================================
+void keepAliveChangeState()
+{
+  Serial.println("Keepalive Change");
+  if (USBBankState == 0 ){
+    Serial.println("Switching off");
+    USBBankState = 1;
+    digitalWrite(keepAlive, 0); // Switch Transistor Off
+    USBBank.attach(kaTimeOff, keepAliveChangeState); //Use attach_ms   
+  }
+  else if (USBBankState == 1 ){
+    Serial.println("Switching on");
+    USBBankState = 0;
+    digitalWrite(keepAlive, 1); // Switch Transistor On
+    USBBank.attach(kaTimeOn, keepAliveChangeState); //Use attach_ms   
+  }
+}
+
+
+
 
 void setup() {
   // initialize serial communications at 9600 bps:
@@ -104,6 +132,10 @@ void setup() {
   //pinMode(OE, OUTPUT);
 
 
+  pinMode(keepAlive, OUTPUT);     // KeepAlive pin needs pulling low, otherwise it'll float up
+  digitalWrite(keepAlive, LOW);   // and switch on the transistor.
+
+  USBBank.attach(1, keepAliveChangeState); //Use attach_ms 
 
 #ifdef DEBUG
   Serial.print("numberofrows:");
