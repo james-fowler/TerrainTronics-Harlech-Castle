@@ -14,7 +14,7 @@
  *  That circuit is normally used to keep a USB Powerbank alive by pulling a load once in a while.
  * 
  */
-
+#include <ESP8266WiFi.h> // This allows the modem to be powered off, saving 40mA!
 
 // This sets up the USBBank Keep Alive Functionality. By default, this is set to 100mA of additional current, for 1S every 10.
 #include <Ticker.h>  //Ticker Library
@@ -22,7 +22,7 @@ Ticker USBBank;
 int USBBankState = 0;
 const int keepAlive = D3;// The Keepalive pin for USB Power Banks is D3.
 const int kaTimeOn = 1; // Time to switch the keep alive circuit on.
-const int kaTimeOff = 9; // Time to switch the keep alive circuit off for.
+const int kaTimeOff = 8; // Time to switch the keep alive circuit off for.
 
 // #define DEBUG 0 // this is used to switch debug comments on and off. Comment it out with // to optimize the code.
 
@@ -57,40 +57,50 @@ int breathDir = 0;  //Breathing Direction - 0 is counting up, 1 is counting down
  */
 
 
-// LED Test Pattern. 
+
+
+//LED Test Pattern. 
+//Standard LED Test Pattern
+//This the pattern (on/off flashing) thats used in production to test the pins are soldered correctly etc.
 int ledPattern[][3] = {   {0b11111111,  0,  500 } ,
-                          {0b10101010,  0,  500 } ,
-                          {0b10000000,  0,  50 } ,
-                          {0b01000000,  0,  50 } ,
-                          {0b00100000,  0,  50 } ,
-                          {0b00010000,  0,  50 } ,
-                          {0b00001000,  0,  50 } ,
-                          {0b00000100,  0,  50 } ,
-                          {0b00000010,  0,  50 } ,
-                          {0b00000001,  0,  50 } ,
-                          {0b01010101,  0,  500 } };
+                          {0b00000000,  0,  500 } };
 
 //Candle Flicker (on one of the LED's)
-//int ledPattern[][3] = {   {0b00000101,  600,  100 } ,
-//                          {0b00000101,  300,  150 } ,
-//                          {0b00000101,  100,  200 } ,
-//                          {0b00000101,  0,  100 } ,
-//                          {0b00000101,  400,  100 } ,
-//                          {0b00000101,  800,  50 } ,
-//                          {0b00000101,  1000,  200 } ,
-//                          {0b00000101,  1020,  50 } ,
-//                          {0b00000101,  850,  150 } ,
-//                          {0b00000101,  900,  100 } ,
-//                          {0b00000101,  500,  150 } ,
-//                          {0b00000101,  100,  200 } ,
-//                          {0b00000101,  0,  100 } ,
-//                          {0b00000101,  600,  100 } ,
-//                          {0b00000101,  800,  50 } ,
-//                          {0b00000101,  100,  200 } ,
-//                          {0b00000101,  1020,  50 } ,
-//                          {0b00000101,  850,  150 } ,
-//                          {0b00000101,  900,  100 } ,
-//                          {0b00000101,  400,  200 } };
+//The brightness (second column) is changed in each step as well as the time between steps (3rd column)
+//Technically, this could be done with a clever randomizer algorithm. Left as an excercise to the reader! ;)
+
+//int ledPattern[][3] = {   {0b00000111,  600,  100 } ,
+//                          {0b00000111,  300,  150 } ,
+//                          {0b00000111,  100,  200 } ,
+//                          {0b00000111,  0,  100 } ,
+//                          {0b00000111,  400,  100 } ,
+//                          {0b00000111,  800,  50 } ,
+//                          {0b00000111,  1000,  200 } ,
+//                          {0b00000111,  1020,  50 } ,
+//                          {0b00000111,  850,  150 } ,
+//                          {0b00000111,  900,  100 } ,
+//                          {0b00000111,  500,  150 } ,
+//                          {0b00000111,  100,  200 } ,
+//                          {0b00000111,  0,  100 } ,
+//                          {0b00000111,  600,  100 } ,
+//                          {0b00000111,  800,  50 } ,
+//                          {0b00000111,  100,  200 } ,
+//                          {0b00000111,  1020,  50 } ,
+//                          {0b00000111,  850,  150 } ,
+//                          {0b00000111,  900,  100 } ,
+//                          {0b0000011 1,  400,  200 } };
+
+
+//int ledPattern[][3] = {   {0b11111111,  0,  500 } ,
+//                          {0b00000000,  0,  500 } ,
+//                          {0b11111111,  0,  500} ,
+//                          {0b00000000,  0,  500 } ,
+//                          {0b10001000,  0,  250 } ,
+//                          {0b01000100,  0,  250 } ,
+//                          {0b00100010,  0,  250 } ,
+//                          {0b00010001,  0,  250 } ,
+//                          {0b00000000,  0,  1000 } };
+
 
 
 // Set Up and initialize the pointers used for patterns                          
@@ -102,17 +112,20 @@ int numrows = 0;
 int numRows = sizeof(ledPattern)/sizeof(ledPattern[0]);
 
 //=======================================================================
+// This is a subroutine that switches the keepAlive pin on/off to switch on a transistor that pulls current to ground, through a 47Ohm resistor
+// PLEASE NOTE: You cannot leave this on for a long long time, as the resistor will begin to heat up beyond it's rating!
+
 void keepAliveChangeState()
 {
-  Serial.println("Keepalive Change");
+  //Serial.println("Keepalive Change");
   if (USBBankState == 0 ){
-    Serial.println("Switching off");
+    //Serial.println("Switching off");
     USBBankState = 1;
     digitalWrite(keepAlive, 0); // Switch Transistor Off
     USBBank.attach(kaTimeOff, keepAliveChangeState); //Use attach_ms   
   }
   else if (USBBankState == 1 ){
-    Serial.println("Switching on");
+    //Serial.println("Switching on");
     USBBankState = 0;
     digitalWrite(keepAlive, 1); // Switch Transistor On
     USBBank.attach(kaTimeOn, keepAliveChangeState); //Use attach_ms   
@@ -123,30 +136,30 @@ void keepAliveChangeState()
 
 
 void setup() {
-  // initialize serial communications at 9600 bps:
+  
+  WiFi.disconnect();     // We're not using Wifi, so lets disable it to save power.
+  WiFi.forceSleepBegin();
+  delay(1); //For some reason the modem won't go to sleep unless you do a delay
+  
+  
+  // initialize serial communications at 9600 bps: this is only used for communication with a PC.
   Serial.begin(9600);
     //set pins to output because they are addressed in the main loop
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
-  //pinMode(OE, OUTPUT);
-
 
   pinMode(keepAlive, OUTPUT);     // KeepAlive pin needs pulling low, otherwise it'll float up
-  digitalWrite(keepAlive, LOW);   // and switch on the transistor.
+  digitalWrite(keepAlive, LOW);   // and switch on the transistor. - THIS IS IMPORTANT, OTHERWISE IT FLOATS UP AND SWITCHES THE TRANSISTOR ON!
 
-  USBBank.attach(1, keepAliveChangeState); //Use attach_ms 
+  USBBank.attach(1, keepAliveChangeState); // This starts the timer for the USB Power Bank Keepalive.
 
-#ifdef DEBUG
-  Serial.print("numberofrows:");
-  Serial.println(numRows);
-#endif
 }
 
 void loop() {
 
 
-// Defines the three 
+// Defines the three variables
   patternData = ledPattern[patternIndex][0];
   dutyCycle = ledPattern[patternIndex][1];
   patternDelay = ledPattern[patternIndex][2];
@@ -169,10 +182,10 @@ void loop() {
     digitalWrite(latchPin, HIGH); // Tells the LED driver 
    // Serial.println("DONE WRITING");
    analogWrite(OE, dutyCycle);
-   delay(patternDelay);
+   delay(patternDelay);                        // HERE IS THE ONE "DELAY" CALL. DELAY is a lazy command. Ideally, you'd set the processor into deep sleep for this time, rahter than have it twiddle its thumbs.
 
-  patternIndex++;
-  if (patternIndex == numRows) { 
+  patternIndex++; // Step to the next item in the index
+  if (patternIndex == numRows) {    // if you hit the maximum number of rows in teh pattern, set it back to the 0'th row (the first)
     patternIndex = 0;
   }
 
