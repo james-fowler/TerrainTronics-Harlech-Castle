@@ -1,7 +1,7 @@
 //**************************************************************//
 //  Name    : Harlech Castle PG1.0 Simple Patterns              //
 //  Author  : Dafydd Roche                                      //
-//  Date    : 1/22/2021                                         //
+//  Date    : 2/2/2021                                         //
 //  Version : 1.0                                               //
 //  Notes   : This code runs on the Wemos D1 Mini.              //
 //            This code does not use any of the Wifi            //
