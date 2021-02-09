@@ -1,8 +1,8 @@
 //**************************************************************//
 //  Name    : Harlech Castle PG1.0 Simple Patterns              //
 //  Author  : Dafydd Roche                                      //
-//  Date    : 2/2/2021                                         //
-//  Version : 1.0                                               //
+//  Date    : 2/8/2021                                         //
+//  Version : 1.1                                               //
 //  Notes   : This code runs on the Wemos D1 Mini.              //
 //            This code does not use any of the Wifi            //
 //              Capabilities                                    //
@@ -12,6 +12,26 @@
  *  Connect Pin2 to pin3 of Pot R2 to make sure the potentiometer changes the constant current.
  *  PWM'ing the OE pin can do amplitude control
  *  That circuit is normally used to keep a USB Powerbank alive by pulling a load once in a while.
+ *
+ * 
+ * Things you need to do when you get your hands on this code.
+ * - Configure the Keepalive settings. See the lines "const int kaTimeOn" and "kaTimeOff".
+ * This circuits pulls a burst of power for 1 second every 8 seconds by default. This needs to be tuned 
+ * for the USB battery pack you are using. Some might only need it for 0.5 seconds every 30 seconds 
+ * to make sure it stays on. Others, need it WAY more often. 1 second on every 8 seconds was selected with
+ * the crappy battery pack I was using
+ * 
+ * Select which pattern you want. There are three patterns in this code, the line of code starts with 
+ * int ledPattern[][3]. The default one is all on, all off for 3 seconds each. 2 states and it just goes 'round and round.
+ * To select the one you want, comment out the test one (by using // in front of the lines) and uncomment the pattern you want.
+ * (Simply delete the // in front of the lines you want)
+ * 
+ * Any questions, come on over to github or post on the facebook group!
+ * 
+ * Cheers
+ * 
+ * TerrainTronics
+ * 
  * 
  */
 #include <ESP8266WiFi.h> // This allows the modem to be powered off, saving 40mA!
@@ -62,8 +82,8 @@ int breathDir = 0;  //Breathing Direction - 0 is counting up, 1 is counting down
 //LED Test Pattern. 
 //Standard LED Test Pattern
 //This the pattern (on/off flashing) thats used in production to test the pins are soldered correctly etc.
-int ledPattern[][3] = {   {0b11111111,  0,  500 } ,
-                          {0b00000000,  0,  500 } };
+int ledPattern[][3] = {   {0b00000011,  0,  3000 } ,
+                          {0b00001100,  0,  3000 } };
 
 //Candle Flicker (on one of the LED's)
 //The brightness (second column) is changed in each step as well as the time between steps (3rd column)
