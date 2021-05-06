@@ -12,6 +12,10 @@
 
 #endif
 
+#include <map>
+#include <vector>
+#include <memory>
+
 #ifdef HC_ENABLE_DEBUG_LOG
 
 #define HC_LOG1( A ) Serial.println( A )

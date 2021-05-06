@@ -71,6 +71,12 @@ void setup() {
   
   // initialize serial communications at 9600 bps: this is only used for communication with a PC.
   Serial.begin(9600);
+
+
+  demo.addPattern( "candle", candlePattern );
+  demo.addPattern( "blink", blinkPattern );
+  demo.addPattern( "pattern3", pattern3 );
+  
     //set pins to output because they are addressed in the main loop
   pinMode(HPC_LATCH, OUTPUT);
   pinMode(HPC_CLOCK, OUTPUT);
@@ -86,32 +92,60 @@ void setup() {
   keepAlive.scheduleNext();
 }
 
-void loop() {
-  HC_LOG1( "LOOP" );
+void HarlechCastleDemo::loop() {
+  auto now = millis();
+  if( now < nextAdvance ) return;
   
-  auto &pattern = demo.pattern();
-  auto const &patternStep = pattern.currentStep();
-  auto patternData = patternStep.ledPattern ;
+  auto const &patternStep = pattern().currentStep();
   auto dutyCycle = patternStep.brightness;
-  auto patternDelay = patternStep.duration;
   
-  HC_LOG4( "Pattern", patternData, dutyCycle, patternDelay );
+  HC_LOG4( "Pattern", patternStep.ledPattern, dutyCycle, patternStep.duration );
   
-   HC_LOG1( "WRITE TO SHIFTER" );
-   digitalWrite(HPC_LATCH, LOW); // Tells the LED driver IC to listen
-   shiftOut(HPC_DATA, HPC_CLOCK, LSBFIRST, patternData);
-   digitalWrite(HPC_LATCH, HIGH); // Tells the LED driver 
-   HC_LOG1(  "DONE WRITING");
-   
-   analogWrite(HPC_OE, dutyCycle);
-   #ifdef HPC_OE2
-   analogWrite(HPC_OE2, dutyCycle);
-   #endif
+  HC_LOG1( "WRITE TO SHIFTER" );
+  digitalWrite(HPC_LATCH, LOW); // Tells the LED driver IC to listen
+  shiftOut(HPC_DATA, HPC_CLOCK, LSBFIRST, patternStep.ledPattern);
+  digitalWrite(HPC_LATCH, HIGH); // Tells the LED driver 
+  HC_LOG1(  "DONE WRITING");
   
-   HC_LOG2( "DELAY", patternDelay );
-   delay(patternDelay);                        // HERE IS THE ONE "DELAY" CALL. DELAY is a lazy command. Ideally, you'd set the processor into deep sleep for this time, rahter than have it twiddle its thumbs.
+  analogWrite(HPC_OE, dutyCycle);
+  #ifdef HPC_OE2
+  analogWrite(HPC_OE2, dutyCycle);
+  #endif
   
-  pattern.advance();
+  HC_LOG2( "DELAY", patternStep.duration );
+  nextAdvance = now + patternStep.duration;
 
+  pattern().advance();
+}
 
+void loop() {
+  
+  demo.loop();
+  if(1) {
+    static int maxAnalogIn = 1;
+    static int priorAnalogIn = 1;
+    static int priorPattern = -1;
+    int analogIn = analogRead( HPC_ADC_IN );
+    
+    if( analogIn != priorAnalogIn ) {
+      priorAnalogIn  = analogIn;
+      // HC_LOG2( "analogIn ", analogIn );
+      if(analogIn > maxAnalogIn) {
+        maxAnalogIn = analogIn;
+      }
+      
+      size_t pattern = (analogIn * (demo.patterns()+1)) / maxAnalogIn;
+      
+      if( pattern != priorPattern ) {
+        priorPattern = pattern;
+        HC_LOG2( "Changed Pattern ", pattern );
+        pattern = std::min( pattern, demo.patterns() - 1 );
+        demo.setPattern(pattern);
+        
+      }
+      
+    }
+  }
+  
+  delay(10);
 }
