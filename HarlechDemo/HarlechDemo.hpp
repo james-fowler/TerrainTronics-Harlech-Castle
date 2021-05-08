@@ -5,76 +5,90 @@
 #include "HarlechPinConfig.hpp"
 #include "KeepAlive.hpp"
 #include "Patterns.hpp"
+#include "HarlechOutputControl.hpp"
 
-
-struct PatternStep {
-  int ledPattern;
-  int brightness;
-  int duration;
-};
-
-class HarlechCastleDemoPattern {
-public:
-  std::string name;
-  std::vector<PatternStep> steps;
-
-  // Set Up and initialize the pointers used for patterns                          
-  size_t currentIndex = 0;
-
-  template <size_t N>
-  HarlechCastleDemoPattern( const char *name, int (&pattern)[N][3] ) : name(name) {
-    for( size_t x = 0; x < N; x++ ) {
-      PatternStep step { pattern[x][0], pattern[x][1], pattern[x][2] };
-      steps.push_back( step );
-    }
-  }
-
-  const PatternStep &currentStep() const { return steps[currentIndex]; }
-  void advance() { 
-    if( ++currentIndex >= steps.size() ) {
-      currentIndex  = 0; }
-    }
-  
-};
-typedef std::shared_ptr<HarlechCastleDemoPattern> PatternPtr;
 class HarlechCastleDemo {
 public: 
+  HarlechOutputControl &harlech;
+  ESP_NVM_Access nvm;
   
-  HarlechCastleDemo() :
-      nextAdvance(0)
-      {}
+  HarlechCastleDemo(HarlechOutputControl &harlech ) : harlech(harlech) {}
 
-  const HarlechCastleDemoPattern &pattern() const { return *activePattern; }
-  HarlechCastleDemoPattern &pattern() { return *activePattern; }
-
-  template <size_t N>
-  HarlechCastleDemo &addPattern( const char *name, int (&pattern)[N][3] ) {
-    HarlechCastleDemoPattern p( name, pattern );
-    auto pShared = std::make_shared<HarlechCastleDemoPattern>(p);
-    _patterns.push_back(pShared);
-    patternMap[pShared->name] = pShared;
-    if( !activePattern ) {
-      activePattern = pShared;
+  void setup() {
+    nvm.setup();
+    showHelp();
+  }
+  void checkAnalogIn() {
+  
+    static int maxAnalogIn = 1;
+    static int priorAnalogIn = 1;
+    static int priorPattern = -1;
+    int analogIn = analogRead( HPC_ADC_IN );
+    
+    if( analogIn != priorAnalogIn ) {
+      priorAnalogIn  = analogIn;
+      // HC_LOG2( "analogIn ", analogIn );
+      if(analogIn > maxAnalogIn) {
+        maxAnalogIn = analogIn;
+      }
+      
+      size_t pattern = (analogIn * (harlech.patterns()+1)) / maxAnalogIn;
+      
+      if( pattern != priorPattern ) {
+        priorPattern = pattern;
+        HC_LOG2( "Changed Pattern ", pattern );
+        harlech.setPattern(pattern);
+      }
     }
-    return *this;
-  }
-  size_t patterns() const { return _patterns.size(); }
-  
-  void setPattern( size_t index ) {
-    index = std::min( index, _patterns.size()-1 );
-    activePattern = _patterns[index];
   }
 
-  void loop();
-  void setup();
+  void showHelp() {
+    static const char *helpLines[] =  {
+        "HELP",
+        " h/? : show this help",
+        "  d  : toggle debug print",
+        
+    };
+
+    for( auto line : helpLines ) {
+      Serial.println( line );
+    }
+  }
+  
+  void handleKey( int c ) {
+    switch(c) {
+      case 'h':
+      case '?':
+        showHelp();
+        break;
+      case 'd':
+        spw.enabled = !spw.enabled;
+        spw.printsln( "Debug Logging ", spw.enabled ? "enabled" : "disabled" );
+        break;
+      case 'f':
+      case 'g':
+      case 'i':
+      case 'j':
+        nvm.storeByteToEeprom(42,c);
+        spw.printsln( "stored", (int)c, " in [42]" );
+        break;
+      case 'r': {
+        int v = nvm.readByteFromEeprom(42);
+        spw.printsln( "read ", (int)v, " from [42]" );
+        break;
+      }
+
+      default:
+        Serial.print( (char)c );
+    }
+  }
+
+  void loop(MilliTime now);
 
 protected:
-  size_t nextAdvance;
-  std::vector<PatternPtr> _patterns;
-  std::map<std::string, PatternPtr> patternMap;
-  PatternPtr activePattern;
 
 };
+
 
 
 #endif // _HARLECH_DEMO_HPP_

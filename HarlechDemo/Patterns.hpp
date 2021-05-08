@@ -1,6 +1,39 @@
 #ifndef _PATTERNS_HPP_
 #define _PATTERNS_HPP_
 
+#include "Harlech.hpp"
+
+struct PatternStep {
+  int ledPattern;
+  int brightness;
+  int duration;
+};
+
+class HarlechCastleDemoPattern {
+public:
+  std::string name;
+  std::vector<PatternStep> steps;
+
+  // Set Up and initialize the pointers used for patterns                          
+  size_t currentIndex = 0;
+
+  template <size_t N>
+  HarlechCastleDemoPattern( const char *name, int (&pattern)[N][3] ) : name(name) {
+    for( size_t x = 0; x < N; x++ ) {
+      PatternStep step { pattern[x][0], pattern[x][1], pattern[x][2] };
+      steps.push_back( step );
+    }
+  }
+
+  const PatternStep &currentStep() const { return steps[currentIndex]; }
+  void advance() { 
+    if( ++currentIndex >= steps.size() ) {
+      currentIndex  = 0; }
+    }
+  
+};
+typedef std::shared_ptr<HarlechCastleDemoPattern> PatternPtr;
+
 /*
  * The following array defines patterns. 
  * The first column sets which LED's are on or off. 

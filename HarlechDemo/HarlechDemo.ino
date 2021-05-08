@@ -58,42 +58,30 @@
 
 #include "HarlechDemo.hpp"
 
+SerialPrintWrap spw;
+
 
 KeepAlivePinger keepAlive;
-HarlechCastleDemo demo;
+HarlechOutputControl harlech;
+HarlechCastleDemo demo(harlech);
 
 void setup() {
   
-  WiFi.disconnect();     // We're not using Wifi, so lets disable it to save power.
-  WiFi.forceSleepBegin();
-  delay(1); //For some reason the modem won't go to sleep unless you do a delay
-  
+#if !defined(ARDUINO_ARCH_ESP32)
+ // WiFi.disconnect();     // We're not using Wifi, so lets disable it to save power.
+ // WiFi.forceSleepBegin();
+ // delay(1); //For some reason the modem won't go to sleep unless you do a delay
+#endif
   
   // initialize serial communications at 9600 bps: this is only used for communication with a PC.
-  Serial.begin(9600);
+  Serial.begin(115200);
 
-
-  demo.addPattern( "candle", candlePattern );
-  demo.addPattern( "blink", blinkPattern );
-  demo.addPattern( "pattern3", pattern3 );
-  
-    //set pins to output because they are addressed in the main loop
-  pinMode(HPC_LATCH, OUTPUT);
-  pinMode(HPC_CLOCK, OUTPUT);
-  pinMode(HPC_DATA, OUTPUT);
-
-  pinMode(HPC_KEEP_ALIVE, OUTPUT);     // KeepAlive pin needs pulling low, otherwise it'll float up
-  digitalWrite(HPC_KEEP_ALIVE, LOW);   // and switch on the transistor. - THIS IS IMPORTANT, OTHERWISE IT FLOATS UP AND SWITCHES THE TRANSISTOR ON!
-  #ifdef HPC_KEEP_ALIVE2
-  pinMode(HPC_KEEP_ALIVE2, OUTPUT);     // KeepAlive pin needs pulling low, otherwise it'll float up
-  digitalWrite(HPC_KEEP_ALIVE2, LOW);   // and switch on the transistor. - THIS IS IMPORTANT, OTHERWISE IT FLOATS UP AND SWITCHES THE TRANSISTOR ON!
-  #endif
-
-  keepAlive.scheduleNext();
+  keepAlive.setup();
+  harlech.setup();
+  demo.setup();
 }
 
-void HarlechCastleDemo::loop() {
-  auto now = millis();
+void HarlechOutputControl::loop( MilliTime now ) {
   if( now < nextAdvance ) return;
   
   auto const &patternStep = pattern().currentStep();
@@ -118,34 +106,27 @@ void HarlechCastleDemo::loop() {
   pattern().advance();
 }
 
+void HarlechCastleDemo::loop( MilliTime now ) {
+ //'while( Serial.available() ) {
+    char buf[2];
+    auto lengthRead = Serial.readBytes(buf, 1 );
+    if(lengthRead) {
+      buf[1] = 0;
+      HC_LOG( "Read key input", buf );
+      handleKey(buf[0]);
+    }  
+    //else {
+    //  break;
+   // }
+  }    
+//}
+
 void loop() {
+  MilliTime now = millis();
+  harlech.loop(now);
+  demo.loop(now);
+  keepAlive.loop(now);
   
-  demo.loop();
-  if(1) {
-    static int maxAnalogIn = 1;
-    static int priorAnalogIn = 1;
-    static int priorPattern = -1;
-    int analogIn = analogRead( HPC_ADC_IN );
-    
-    if( analogIn != priorAnalogIn ) {
-      priorAnalogIn  = analogIn;
-      // HC_LOG2( "analogIn ", analogIn );
-      if(analogIn > maxAnalogIn) {
-        maxAnalogIn = analogIn;
-      }
-      
-      size_t pattern = (analogIn * (demo.patterns()+1)) / maxAnalogIn;
-      
-      if( pattern != priorPattern ) {
-        priorPattern = pattern;
-        HC_LOG2( "Changed Pattern ", pattern );
-        pattern = std::min( pattern, demo.patterns() - 1 );
-        demo.setPattern(pattern);
-        
-      }
-      
-    }
-  }
-  
-  delay(10);
+
+//  delay(10);
 }
