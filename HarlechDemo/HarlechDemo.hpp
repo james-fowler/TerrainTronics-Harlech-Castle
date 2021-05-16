@@ -7,15 +7,22 @@
 #include "Patterns.hpp"
 #include "HarlechOutputControl.hpp"
 
+using Lumensalis::spw;
+
 class HarlechCastleDemo {
 public: 
   HarlechOutputControl &harlech;
-  ESP_NVM_Access nvm;
+  //ESP_NVM_Access nvm;
+  HarlechDemoConfig demoConfig;
   
   HarlechCastleDemo(HarlechOutputControl &harlech ) : harlech(harlech) {}
 
   void setup() {
-    nvm.setup();
+    //nvm.setup();
+    HarlechDemoConfigWrapper cfg( demoConfig );
+
+    cfg.dump();
+    
     showHelp();
   }
   void checkAnalogIn() {
@@ -23,11 +30,11 @@ public:
     static int maxAnalogIn = 1;
     static int priorAnalogIn = 1;
     static int priorPattern = -1;
-    int analogIn = analogRead( HPC_ADC_IN );
+    int analogIn = analogRead( demoConfig.adcInPin );
     
     if( analogIn != priorAnalogIn ) {
       priorAnalogIn  = analogIn;
-      // HC_LOG2( "analogIn ", analogIn );
+      // LSSA_LOG( "analogIn ", analogIn );
       if(analogIn > maxAnalogIn) {
         maxAnalogIn = analogIn;
       }
@@ -36,7 +43,7 @@ public:
       
       if( pattern != priorPattern ) {
         priorPattern = pattern;
-        HC_LOG2( "Changed Pattern ", pattern );
+        LSSA_LOG( "Changed Pattern ", pattern );
         harlech.setPattern(pattern);
       }
     }
@@ -69,12 +76,12 @@ public:
       case 'g':
       case 'i':
       case 'j':
-        nvm.storeByteToEeprom(42,c);
+        // nvm.storeByteToEeprom(42,c);
         spw.printsln( "stored", (int)c, " in [42]" );
         break;
       case 'r': {
-        int v = nvm.readByteFromEeprom(42);
-        spw.printsln( "read ", (int)v, " from [42]" );
+        /// int v = nvm.readByteFromEeprom(42);
+        //spw.printsln( "read ", (int)v, " from [42]" );
         break;
       }
 

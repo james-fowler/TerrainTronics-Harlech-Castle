@@ -58,7 +58,7 @@
 
 #include "HarlechDemo.hpp"
 
-SerialPrintWrap spw;
+Lumensalis::SerialPrintWrap Lumensalis::spw;
 
 
 KeepAlivePinger keepAlive;
@@ -87,20 +87,20 @@ void HarlechOutputControl::loop( MilliTime now ) {
   auto const &patternStep = pattern().currentStep();
   auto dutyCycle = patternStep.brightness;
   
-  HC_LOG4( "Pattern", patternStep.ledPattern, dutyCycle, patternStep.duration );
+  LSSA_LOG( "Pattern", patternStep.ledPattern, dutyCycle, patternStep.duration );
   
-  HC_LOG1( "WRITE TO SHIFTER" );
+  LSSA_LOG( "WRITE TO SHIFTER" );
   digitalWrite(HPC_LATCH, LOW); // Tells the LED driver IC to listen
   shiftOut(HPC_DATA, HPC_CLOCK, LSBFIRST, patternStep.ledPattern);
   digitalWrite(HPC_LATCH, HIGH); // Tells the LED driver 
-  HC_LOG1(  "DONE WRITING");
+  LSSA_LOG(  "DONE WRITING");
   
   analogWrite(HPC_OE, dutyCycle);
   #ifdef HPC_OE2
   analogWrite(HPC_OE2, dutyCycle);
   #endif
   
-  HC_LOG2( "DELAY", patternStep.duration );
+  LSSA_LOG( "DELAY", patternStep.duration );
   nextAdvance = now + patternStep.duration;
 
   pattern().advance();
@@ -112,7 +112,7 @@ void HarlechCastleDemo::loop( MilliTime now ) {
     auto lengthRead = Serial.readBytes(buf, 1 );
     if(lengthRead) {
       buf[1] = 0;
-      HC_LOG( "Read key input", buf );
+      LSSA_LOG( "Read key input", buf );
       handleKey(buf[0]);
     }  
     //else {

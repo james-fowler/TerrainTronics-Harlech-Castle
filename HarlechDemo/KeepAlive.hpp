@@ -61,7 +61,7 @@ public:
     int stateTime = USBBankState ? kaTimeOff : kaTimeOn;
     USBBankState = !USBBankState;
 
-    HC_LOG3( "keep alive :", pinState, stateTime );
+    LSSA_LOG( "keep alive :", pinState, stateTime );
     digitalWrite(HPC_KEEP_ALIVE, pinState);
     #ifdef HPC_KEEP_ALIVE2
     digitalWrite(HPC_KEEP_ALIVE2, pinState);
